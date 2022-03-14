@@ -63,8 +63,8 @@ class DropBoxController {
                 let formData = new FormData();
 
                 formData.append('input-file', file);
-
-                ajax.send(formData);
+                
+                ajax.send(formData)
 
             }))
         })
