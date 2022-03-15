@@ -1,7 +1,7 @@
 class DropBoxController {
  
     constructor(){
-        this.btnSendFile  = document.querySelector('#btn-send-file');
+        this.btnSendFileEl  = document.querySelector('#btn-send-file');
         this.inputFilesEl = document.querySelector('#files');
         this.snackModalEl = document.querySelector('#react-snackbar-root');
         this.progressBarEl = this.snackModalEl.querySelector('.mc-progress-bar-fg')
@@ -32,33 +32,51 @@ class DropBoxController {
  
     initEvents(){
  
-        this.btnSendFile.addEventListener('click', event =>{
+        this.btnSendFileEl.addEventListener('click', event =>{
+            
             this.inputFilesEl.click();
  
         });
 
         this.inputFilesEl.addEventListener('change', event=>{
            
+            this.btnSendFileEl.disabled = true;
+
             this.uploadTask(event.target.files).then(responses =>{
 
                 responses.forEach(resp => {
 
-                    console.log(resp.files['input-file']);
+                    this.getFirebaseRef().push().set(resp.files['input-file']);
 
                 })
 
-                this.modalShow(false);
+                this.uploadComplete();
+
+            }).catch(err=>{
+
+                this.uploadComplete();
+                console.error(err);
 
             })
 
             this.modalShow();
 
-            this.inputFilesEl.value = '';
-
         });
     }
 
-    get(){}
+    uploadComplete(){
+
+        this.modalShow(false);
+        this.inputFilesEl.value = '';
+        this.btnSendFileEl.disabled = false;
+
+    }
+
+    getFirebaseRef(){
+
+        return firebase.database().ref('/files');
+
+    }
 
     modalShow(show = true){
 
