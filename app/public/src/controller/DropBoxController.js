@@ -27,7 +27,7 @@ class DropBoxController {
         };
 
         firebase.initializeApp(config);
-        
+
     }   
  
     initEvents(){
@@ -39,16 +39,26 @@ class DropBoxController {
 
         this.inputFilesEl.addEventListener('change', event=>{
            
-            this.uploadTask(event.target.files)
+            this.uploadTask(event.target.files).then(responses =>{
 
-            console.log(event.target.files);
- 
+                responses.forEach(resp => {
+
+                    console.log(resp.files['input-file']);
+
+                })
+
+                this.modalShow(false);
+
+            })
+
             this.modalShow();
 
             this.inputFilesEl.value = '';
 
         });
     }
+
+    get(){}
 
     modalShow(show = true){
 
@@ -68,7 +78,7 @@ class DropBoxController {
  
                 ajax.onload = event =>{
  
-                    this.modalShow(false);
+                    
 
                     try{
                        resolve(JSON.parse(ajax.responseText));
@@ -81,7 +91,7 @@ class DropBoxController {
  
                 ajax.onerror = event =>{
 
-                    this.modalShow(false);
+                    
                     reject(event);
 
                 };
