@@ -24,7 +24,6 @@ class DropBoxController {
 
     connectFirebase(){
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyA2-xemgroYkhnoTOlWEip1HeF6h4tpcL8",
             authDomain: "dropbox-clone-7ba67.firebaseapp.com",
@@ -36,7 +35,7 @@ class DropBoxController {
             measurementId: "G-1KCRVTZHM9"
             
         };
-        // Initialize Firebase
+
         firebase.initializeApp(firebaseConfig);
     
     }   
@@ -47,8 +46,51 @@ class DropBoxController {
 
     }
 
+    removeTask(){
+
+        let promises = [];
+
+        this.getSelection().forEach(li=>{
+
+            let file = JSON.parse(li.dataset.file)
+            let key = li.dataset.key;
+
+            let formData = new FormData();
+
+            formData.append('path', file.path);
+            formData.append('key', file.key);
+            
+            promises.push(this.ajax('/file', 'DELETE', formData))
+            
+        })
+
+        return Promise.all(promises)
+
+    }
+
     initEvents(){
  
+        this.btnDelete.addEventListener('click', e=> {
+
+            this.removeTask().then(responses => {
+
+                responses.forEach(responses=>{
+
+                    if (responses.fields.key) {
+                        this.getFirebaseRef().child(responses.fields.key).remove()
+                   
+                    }
+                })
+                console.log('responses');
+
+            }).catch(err => {
+
+                console.error(err);
+
+            })
+
+        })
+
         this.btnRename.addEventListener('click', e=> {
 
             let li = this.getSelection()[0];
@@ -65,6 +107,7 @@ class DropBoxController {
            
             }
         })
+
         this.listFilesEl.addEventListener('selectionchange', e =>{
             
             switch (this.getSelection().lenght) {
@@ -137,51 +180,61 @@ class DropBoxController {
 
         this.snackModalEl.style.display = (show) ? 'block' : 'none';
     } 
-     uploadTask(files){
+
+    ajax(url, method = 'GET', formData = new FormData(), onprogress = function(){}, onloadstart = function(){}){
+
+        return new Promise((resolve, reject) => {
+
+            let ajax = new XMLHttpRequest();
+ 
+            ajax.open(method, url);
+
+            ajax.onload = event =>{
+
+                try{
+                   resolve(JSON.parse(ajax.responseText));
+
+                }catch(e){
+                   reject(e); 
+                }
+
+            };
+
+            ajax.onerror = event =>{
+
+                reject(event);
+
+            };
+
+            ajax.upload.onprogress = onprogress;
+          
+            onloadstart();
+
+            ajax.send(formData);
+
+        })
+    }
+
+    uploadTask(files){
  
         let promises = [];
  
         [...files].forEach(file=>{
  
-            promises.push(new Promise((resolve, reject)=>{
+            let formData = new FormData();
  
-                let ajax = new XMLHttpRequest();
- 
-                ajax.open('Post','/upload');
- 
-                ajax.onload = event =>{
- 
-                    
+            formData.append('input-file', file);
 
-                    try{
-                       resolve(JSON.parse(ajax.responseText));
- 
-                    }catch(e){
-                       reject(e); 
-                    }
- 
-                };
- 
-                ajax.onerror = event =>{
+            promises.push(this.ajax('/upload', 'POST', formData, () => {
 
-                    
-                    reject(event);
-
-                };
-
-                ajax.upload.onprogress = event => {
-
-                    this.uploadProgress(event, file)
-                    
-                }
+                this.uploadProgress(event, file);
                 
-                let formData = new FormData();
- 
-                formData.append('input-file', file);
+            },()=>{
 
-                ajax.send(formData);
- 
-            }));
+                this.startUploadTime = Date.now();
+
+            }))
+
         });
  
         return Promise.all(promises);
