@@ -1,10 +1,13 @@
 class DropBoxController {
- 
-    constructor(){
+
+    constructor() {
+
+        this.currentFolder = ['hcode'];
 
         this.onselectionchange = new Event('selectionchange');
 
-        this.btnSendFileEl  = document.querySelector('#btn-send-file');
+        this.navEl = document.querySelector('#browse-location')
+        this.btnSendFileEl = document.querySelector('#btn-send-file');
         this.inputFilesEl = document.querySelector('#files');
         this.snackModalEl = document.querySelector('#react-snackbar-root');
         this.progressBarEl = this.snackModalEl.querySelector('.mc-progress-bar-fg')
@@ -18,13 +21,15 @@ class DropBoxController {
 
         this.connectFirebase();
         this.initEvents();
-        this.readFiles();
- 
+
+        this.openFolder();
+
     }
 
-    connectFirebase(){
+    connectFirebase() {
 
         const firebaseConfig = {
+
             apiKey: "AIzaSyA2-xemgroYkhnoTOlWEip1HeF6h4tpcL8",
             authDomain: "dropbox-clone-7ba67.firebaseapp.com",
             databaseURL: "https://dropbox-clone-7ba67-default-rtdb.europe-west1.firebasedatabase.app",
@@ -33,24 +38,24 @@ class DropBoxController {
             messagingSenderId: "306015680864",
             appId: "1:306015680864:web:011f6d3d2e42156b608605",
             measurementId: "G-1KCRVTZHM9"
-            
+
         };
 
         firebase.initializeApp(firebaseConfig);
-    
-    }   
 
-    getSelection(){
+    }
+
+    getSelection() {
 
         return this.listFilesEl.querySelectorAll('.selected')
 
     }
 
-    removeTask(){
+    removeTask() {
 
         let promises = [];
 
-        this.getSelection().forEach(li=>{
+        this.getSelection().forEach(li => {
 
             let file = JSON.parse(li.dataset.file)
             let key = li.dataset.key;
@@ -59,26 +64,40 @@ class DropBoxController {
 
             formData.append('path', file.path);
             formData.append('key', file.key);
-            
+
             promises.push(this.ajax('/file', 'DELETE', formData))
-            
+
         })
 
         return Promise.all(promises)
 
     }
 
-    initEvents(){
- 
-        this.btnDelete.addEventListener('click', e=> {
+    initEvents() {
+
+        this.btnNewFolder.addEventListener('click', e => {
+
+            let name = prompt('Nome da nova pasta: ');
+
+            if (name) {
+
+                this.getFirebaseRef().push().set({
+                    name,
+                    type: 'folder',
+                    path: this.currentFolder.join('/')
+                })
+            }
+        })
+
+        this.btnDelete.addEventListener('click', e => {
 
             this.removeTask().then(responses => {
 
-                responses.forEach(responses=>{
+                responses.forEach(responses => {
 
                     if (responses.fields.key) {
                         this.getFirebaseRef().child(responses.fields.key).remove()
-                   
+
                     }
                 })
                 console.log('responses');
@@ -91,7 +110,7 @@ class DropBoxController {
 
         })
 
-        this.btnRename.addEventListener('click', e=> {
+        this.btnRename.addEventListener('click', e => {
 
             let li = this.getSelection()[0];
 
@@ -104,23 +123,23 @@ class DropBoxController {
                 file.name = name;
 
                 this.getFirebaseRef().child(li.dataset.key).ser(file);
-           
+
             }
         })
 
-        this.listFilesEl.addEventListener('selectionchange', e =>{
-            
+        this.listFilesEl.addEventListener('selectionchange', e => {
+
             switch (this.getSelection().lenght) {
 
                 case 0:
                     this.btnDelete.style.display = 'none';
                     this.btnRename.style.display = 'none';
-                break;
-                    
+                    break;
+
                 case 1:
                     this.btnDelete.style.display = 'block';
                     this.btnRename.style.display = 'block';
-                break;
+                    break;
 
                 default:
                     this.btnDelete.style.display = 'block';
@@ -128,19 +147,19 @@ class DropBoxController {
             }
         });
 
-        this.btnSendFileEl.addEventListener('click', event =>{
-            
+        this.btnSendFileEl.addEventListener('click', event => {
+
             switch (this.getSelection().lenght) {
 
 
             }
         });
 
-        this.inputFilesEl.addEventListener('change', event=>{
-           
+        this.inputFilesEl.addEventListener('change', event => {
+
             this.btnSendFileEl.disabled = true;
 
-            this.uploadTask(event.target.files).then(responses =>{
+            this.uploadTask(event.target.files).then(responses => {
 
                 responses.forEach(resp => {
 
@@ -150,7 +169,7 @@ class DropBoxController {
 
                 this.uploadComplete();
 
-            }).catch(err=>{
+            }).catch(err => {
 
                 this.uploadComplete();
                 console.error(err);
@@ -162,7 +181,7 @@ class DropBoxController {
         });
     }
 
-    uploadComplete(){
+    uploadComplete() {
 
         this.modalShow(false);
         this.inputFilesEl.value = '';
@@ -170,44 +189,46 @@ class DropBoxController {
 
     }
 
-    getFirebaseRef(){
+    getFirebaseRef(path) {
 
-        return firebase.database().ref('/files');
+        if (!path) path = this.currentFolder.join('/');
+
+        return firebase.database().ref(path);
 
     }
 
-    modalShow(show = true){
+    modalShow(show = true) {
 
         this.snackModalEl.style.display = (show) ? 'block' : 'none';
-    } 
+    }
 
-    ajax(url, method = 'GET', formData = new FormData(), onprogress = function(){}, onloadstart = function(){}){
+    ajax(url, method = 'GET', formData = new FormData(), onprogress = function () { }, onloadstart = function () { }) {
 
         return new Promise((resolve, reject) => {
 
             let ajax = new XMLHttpRequest();
- 
+
             ajax.open(method, url);
 
-            ajax.onload = event =>{
+            ajax.onload = event => {
 
-                try{
-                   resolve(JSON.parse(ajax.responseText));
+                try {
+                    resolve(JSON.parse(ajax.responseText));
 
-                }catch(e){
-                   reject(e); 
+                } catch (e) {
+                    reject(e);
                 }
 
             };
 
-            ajax.onerror = event =>{
+            ajax.onerror = event => {
 
                 reject(event);
 
             };
 
             ajax.upload.onprogress = onprogress;
-          
+
             onloadstart();
 
             ajax.send(formData);
@@ -215,55 +236,55 @@ class DropBoxController {
         })
     }
 
-    uploadTask(files){
- 
+    uploadTask(files) {
+
         let promises = [];
- 
-        [...files].forEach(file=>{
- 
+
+        [...files].forEach(file => {
+
             let formData = new FormData();
- 
+
             formData.append('input-file', file);
 
             promises.push(this.ajax('/upload', 'POST', formData, () => {
 
                 this.uploadProgress(event, file);
-                
-            },()=>{
+
+            }, () => {
 
                 this.startUploadTime = Date.now();
 
             }))
 
         });
- 
+
         return Promise.all(promises);
- 
+
     }
 
-    uploadProgress(event, file){
+    uploadProgress(event, file) {
 
         let timespent = Date.now() - this.startUploadTime;
         let loaded = event.loaded;
         let total = event.total;
-        let porcent = parseInt(loaded / total) * 100; 
+        let porcent = parseInt(loaded / total) * 100;
         let timeleft = ((100 - porcent) * timespent) / porcent;
-        
+
         this.progressBarEl.style.width = `${porcent}%`;
-   
+
         this.namefileEl.innerHTML = file.name;
         this.timeleftEl.innerHTML = this.formatTimeToHuman(timeleft);
-   
+
         console.log(timespent, timeleft, porcent);
 
     }
 
-    formatTimeToHuman(duration){
+    formatTimeToHuman(duration) {
 
         let seconds = parseInt((duration / 1000) % 60);
         let minutes = parseInt((duration / (1000 * 60)) % 60);
         let hours = parseInt((duration / (1000 * 60 * 60)) % 24);
-        
+
         if (hours > 0) {
             return `${hours} horas, ${minutes} min e ${seconds} segundos`
         }
@@ -279,7 +300,7 @@ class DropBoxController {
         return '';
     }
 
-    getFileIconView(file){
+    getFileIconView(file) {
 
         switch (file.type) {
 
@@ -293,7 +314,7 @@ class DropBoxController {
                         </g>
                     </svg>
                 `;
-            break;
+                break;
 
             case 'application/pdf':
                 return `
@@ -382,7 +403,7 @@ class DropBoxController {
             case 'image/jpg':
             case 'image/png':
             case 'image/gif':
-                return`
+                return `
                     <svg version="1.1" id="Camada_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="160px" height="160px" viewBox="0 0 160 160" enable-background="new 0 0 160 160" xml:space="preserve">
                         <filter height="102%" width="101.4%" id="mc-content-unknown-large-a" filterUnits="objectBoundingBox" y="-.5%" x="-.7%">
                             <feOffset result="shadowOffsetOuter1" in="SourceAlpha" dy="1"></feOffset>
@@ -447,7 +468,7 @@ class DropBoxController {
         }
     }
 
-    getFileView(file, key){
+    getFileView(file, key) {
 
         let li = document.createElement('li')
 
@@ -464,28 +485,108 @@ class DropBoxController {
         return li
     }
 
-    readFiles(){
+    readFiles() {
 
-        this.getFirebaseRef().on('value', snapshot =>{
+        this.lastFolder = this.currentFolder.join('/')
+
+        this.getFirebaseRef().on('value', snapshot => {
 
             this.listFilesEl.innerHTML = '';
 
-            snapshot.forEach(snapshotItem =>{
+            snapshot.forEach(snapshotItem => {
 
                 let key = snapshotItem.key;
                 let data = snapshotItem.val();
 
-                this.listFilesEl.appendChild(this.getFileView(data, key));
-        
+                if (data.type) {
+
+                    this.listFilesEl.appendChild(this.getFileView(data, key));
+
+                }
             })
         })
     }
 
-    initEventsLi(li){
+    openFolder() {
 
-        li.addEventListener('click', e =>{
+        if (this.lastFolder) this.getFirebaseRef(this.lastFolder).off('value');
 
-            if(e.shiftKey){
+        this.renderNav();
+        this.readFiles();
+
+    }
+
+    renderNav() {
+
+        let nav = document.createElement('nav');
+        let path = [];
+
+        for (let i = 0; i < this.currentFolder.lendht; i++){
+
+            let folderName = this.currentFolder[i];
+            let span = document.createElement('span');
+
+            path.push(folderName);
+
+            if ((i+1) === this.currentFolder.lendht) {
+
+                span.innerHTML = folderName;
+
+            } else {
+
+                span.className = "breadcrumb-segment__wrapper";
+                span.innerHTML = `
+                    <span class="ue-effect-container uee-BreadCrumbSegment-link-0">
+                        <a href="#" data-path="${path.join('/')}" class="breadcrumb-segment">${folderName}</a>
+                    </span>
+                    <svg width="24" height="24" viewBox="0 0 24 24" class="mc-icon-template-stateless" style="top: 4px; position: relative;">
+                        <title>arrow-right</title>
+                        <path d="M10.414 7.05l4.95 4.95-4.95 4.95L9 15.534 12.536 12 9 8.464z" fill="#637282" fill-rule="evenodd"></path>
+                    </svg>
+                `
+            }
+
+            nav.appendChild(span);
+
+        }
+
+        this.navEl.innerHTML = nav.innerHTML;
+
+        this.navEl.querySelectorAll('a').forEach(a=>{
+
+            a.addEventListener('click', e=>{
+
+                e.preventDefault()
+
+                this.currentFolder = a.dataset.path.split('/')
+
+                this.openFolder();
+
+            })
+        })
+    }
+
+    initEventsLi(li) {
+
+        li.addEventListener('dblclick', e => {
+
+            let file = JSON.parse(li.dataset.file)
+
+            switch (file.type) {
+
+                case 'folder':
+                    this.currentFolder.push(file.name);
+                    this.openFolder();
+                    break;
+
+                default:
+                    window.open(`/file?path ${file.path}`)
+            }
+        })
+
+        li.addEventListener('click', e => {
+
+            if (e.shiftKey) {
 
                 let firstLi = this.listFilesEl.querySelector('.selected');
 
@@ -493,13 +594,13 @@ class DropBoxController {
 
                     let indexStart;
                     let indexEnd;
-                    let lis =  li.parentElement.childNodes;
+                    let lis = li.parentElement.childNodes;
 
 
                     lis.forEach((el, index) => {
 
-                        if(firstLi === el) indexStart = index;
-                        if(li === el) indexEnd = index;
+                        if (firstLi === el) indexStart = index;
+                        if (li === el) indexEnd = index;
 
                     })
 
@@ -507,22 +608,22 @@ class DropBoxController {
 
                     lis.forEach((el, i) => {
 
-                        if(i >= index[0] && i<= index[1]) {
+                        if (i >= index[0] && i <= index[1]) {
                             el.classList.add('selected');
 
                         }
                     })
 
                     this.listFilesEl.dispatchEvent(this.onselectionchange);
-                    
+
                     return true;
 
                 }
             }
 
-            if(!e.ctrlKey){
+            if (!e.ctrlKey) {
 
-                this.listFilesEl.querySelectorAll('li.selected').forEach(el=>{
+                this.listFilesEl.querySelectorAll('li.selected').forEach(el => {
 
                     el.classList.remove('selected');
 
