@@ -46,11 +46,11 @@ class DropBoxController {
 
     }
 
-    removeFolderTask(ref, originalFilename, key){
+    removeFolderTask(ref, name, key){
         
         return new Promise((resolve, reject) => {
 
-            let folderRef = this.getFirebaseRef(ref + '/' + originalFilename);
+            let folderRef = this.getFirebaseRef(ref + '/' + name);
 
             folderRef.on('value', snapshot => {
 
@@ -79,7 +79,7 @@ class DropBoxController {
     
                         } else if (data.mimetype || data.type) {
     
-                            this.removeFile(ref + '/' + originalFilename, data.name).then(() => {
+                            this.removeFile(ref + '/' + name, data.name).then(() => {
     
                                 resolve({
                                     fields: {
@@ -138,7 +138,7 @@ class DropBoxController {
 
                 } else if (file.mimetype) {
 
-                    this.removeFile(this.currentFolder.join('/'), file.originalFilename).then(() => {
+                    this.removeFile(this.currentFolder.join('/'), file.name).then(() => {
 
                         resolve({
                             fields: {
@@ -216,7 +216,7 @@ class DropBoxController {
 
             let file = JSON.parse(li.dataset.file);
 
-            let name = prompt("Renomear o arquivo:", file.originalFilename);
+            let name = prompt("Renomear o arquivo:", file.name);
 
             if (name) {
 
@@ -266,7 +266,6 @@ class DropBoxController {
 
                     this.getFirebaseRef().push().set({
                         name: resp.name,
-                        originalFilename: resp.name,
                         mimetype: resp.contentType,
                         path: resp.downloadURLs[0],
                         size: resp.size
@@ -610,7 +609,7 @@ class DropBoxController {
 
         li.innerHTML = `
             ${this.getFileIconView(file)}
-            <div class="name text-center">${file.name? file.name : file.originalFilename}</div>
+            <div class="name text-center">${file.name? file.name : file.name}</div>
         `;
 
         this.initEventsLi(li);
