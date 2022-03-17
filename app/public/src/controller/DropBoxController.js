@@ -21,7 +21,6 @@ class DropBoxController {
 
         this.connectFirebase();
         this.initEvents();
-
         this.openFolder();
 
     }
@@ -29,14 +28,13 @@ class DropBoxController {
     connectFirebase(){
 
         var config = {
-            apiKey: "AIzaSyA2-xemgroYkhnoTOlWEip1HeF6h4tpcL8",
-            authDomain: "dropbox-clone-7ba67.firebaseapp.com",
-            databaseURL: "https://<YOUR dropbox-clone-7ba67-default-rtdb.europe-west1.firebasedatabase.app>",
-            projectId: "dropbox-clone-7ba67",
-            storageBucket: "dropbox-clone-7ba67.appspot.com",
-            messagingSenderId: "306015680864",
-            appId: "1:306015680864:web:011f6d3d2e42156b608605",
-            measurementId: "G-1KCRVTZHM9"
+            apiKey: "AIzaSyDhKi8W4yzuGJ6lbyWfcWhEFTwQEv8tN5Q",
+            authDomain: "dropbox-clone-25f8c.firebaseapp.com",
+            databaseURL: "https://dropbox-clone-25f8c-default-rtdb.firebaseio.com",
+            projectId: "dropbox-clone-25f8c",
+            storageBucket: "dropbox-clone-25f8c.appspot.com",
+            messagingSenderId: "840454411704",
+            appId: "1:840454411704:web:8301bdf6e069f9a1922b4d"
         };
         firebase.initializeApp(config);
 
@@ -67,9 +65,9 @@ class DropBoxController {
                         let data = item.val();
                         data.key = item.key;
     
-                        if (data.type === 'folder') {
+                        if (data.mimetype === 'folder' || data.type === 'folder') {
     
-                            this.removeFolderTask(ref + '/' + name, data.name).then(() => {
+                            this.removeFolderTask(ref + '/' + data.name).then(() => {
     
                                 resolve({
                                     fields: {
@@ -81,7 +79,7 @@ class DropBoxController {
                                 reject(err);
                             });
     
-                        } else if (data.type) {
+                        } else if (data.mimetype || data.type) {
     
                             this.removeFile(ref + '/' + name, data.name).then(() => {
     
@@ -100,12 +98,10 @@ class DropBoxController {
                     });
     
                     folderRef.remove();
+                    folderRef.off('value');
 
-                } else {
-
-                    this.getFirebaseRef('hcode').child(key).remove();
-                    
-                }
+                } 
+                
 
             });
 
@@ -124,7 +120,7 @@ class DropBoxController {
 
             promises.push(new Promise((resolve, reject) => {
 
-                if (file.type === 'folder') {
+                if (file.mimetype === 'folder') {
 
                     this.removeFolderTask(this.currentFolder.join('/'), file.name, key).then(() => {
 
@@ -140,9 +136,9 @@ class DropBoxController {
     
                     });
 
-                } else if (file.type) {
+                } else if (file.mimetype) {
 
-                    this.removeFile(this.currentFolder.join('/'), file.name).then(() => {
+                    this.removeFile(this.currentFolder.join('/'), file.originalFilename).then(() => {
 
                         resolve({
                             fields: {
@@ -184,7 +180,7 @@ class DropBoxController {
 
                 this.getFirebaseRef().push().set({
                     name,
-                    type: 'folder',
+                    mimetype: 'folder',
                     path: this.currentFolder.join('/')
                 });
 
@@ -220,11 +216,11 @@ class DropBoxController {
 
             let file = JSON.parse(li.dataset.file);
 
-            let name = prompt("Renomear o arquivo:", file.name);
+            let name = prompt("Renomear o arquivo:", file.originalFilename);
 
             if (name) {
 
-                file.name = name;
+                file.originalFilename = name;
                 
                 this.getFirebaseRef().child(li.dataset.key).set(file);
 
@@ -268,18 +264,17 @@ class DropBoxController {
 
                 responses.forEach(resp => {
 
-                    resp.ref.getDownloadURL().then(data => {
-
-                        this.getFirebaseRef().push().set({
-                            name: resp.name,
-                            type: resp.contentType,
-                            path: data,
-                            size: resp.size
-                        });
-
+                    this.getFirebaseRef().push().set({
+                        originalFilename: resp.name,
+                        name: resp.name,
+                        mimetype: resp.contentType,
+                        path: resp.downloadURLs[0],
+                        size: resp.size
                     });
 
                 });
+
+                
 
                 this.uploadComplete();
 
@@ -306,7 +301,7 @@ class DropBoxController {
 
     getFirebaseRef(path){
 
-        if (!path) path = this.currentFolder.join('/');
+       if(!path) path = this.currentFolder.join('/');
 
         return firebase.database().ref(path);
 
@@ -439,7 +434,7 @@ class DropBoxController {
 
     getFileIconView(file){
 
-        switch (file.type) {
+        switch (file.mimetype) {
 
             case 'folder':
                 return `
@@ -615,7 +610,7 @@ class DropBoxController {
 
         li.innerHTML = `
             ${this.getFileIconView(file)}
-            <div class="name text-center">${file.name}</div>
+            <div class="name text-center">${file.name? file.name : file.originalFilename}</div>
         `;
 
         this.initEventsLi(li);
@@ -628,25 +623,22 @@ class DropBoxController {
 
         this.lastFolder = this.currentFolder.join('/');
 
-        this.getFirebaseRef().on('value', snapshot => {
+        this.getFirebaseRef().on("value", (snapshot) => {
 
-            this.listFilesEl.innerHTML = '';
+            this.listFilesEl.innerHTML = "";
 
-            snapshot.forEach(snapshotItem => {
+            snapshot.forEach((snapshotItem) => {
 
                 let key = snapshotItem.key;
                 let data = snapshotItem.val();
 
-                if (data.mimetype) {
+                if (data.type || data.mimetype) {
 
                     this.listFilesEl.appendChild(this.getFileView(data, key));
 
                 }
-
             });
-
         });
-
     }
 
     openFolder(){
@@ -718,7 +710,7 @@ class DropBoxController {
 
             let file = JSON.parse(li.dataset.file);
 
-            switch (file.type) {
+            switch (file.mimetype) {
 
                 case 'folder':
                     this.currentFolder.push(file.name);
