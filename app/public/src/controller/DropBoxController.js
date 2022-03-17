@@ -46,13 +46,11 @@ class DropBoxController {
 
     }
 
-    removeFolderTask(ref, originalFilename){
+    removeFolderTask(ref, originalFilename, key){
         
         return new Promise((resolve, reject) => {
 
             let folderRef = this.getFirebaseRef(ref + '/' + originalFilename);
-
-            console.log('Referencia',folderRef);
 
             folderRef.on('value', snapshot => {
 
@@ -81,7 +79,7 @@ class DropBoxController {
     
                         } else if (data.mimetype || data.type) {
     
-                            this.removeFile(ref + '/' + name, data.name).then(() => {
+                            this.removeFile(ref + '/' + originalFilename, data.name).then(() => {
     
                                 resolve({
                                     fields: {
@@ -98,9 +96,11 @@ class DropBoxController {
                     });
     
                     folderRef.remove();
-                    folderRef.off('value');
 
-                } 
+                } else {
+
+                    this.getFirebaseRef('Home').child(key).remove();
+                }
                 
 
             });
@@ -220,7 +220,7 @@ class DropBoxController {
 
             if (name) {
 
-                file.originalFilename = name;
+                file.name = name;
                 
                 this.getFirebaseRef().child(li.dataset.key).set(file);
 
@@ -265,8 +265,8 @@ class DropBoxController {
                 responses.forEach(resp => {
 
                     this.getFirebaseRef().push().set({
-                        originalFilename: resp.name,
                         name: resp.name,
+                        originalFilename: resp.name,
                         mimetype: resp.contentType,
                         path: resp.downloadURLs[0],
                         size: resp.size
