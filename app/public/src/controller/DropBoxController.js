@@ -2,7 +2,7 @@ class DropBoxController {
 
     constructor() {
 
-        this.currentFolder = ['Menezes'];
+        this.currentFolder = ['Primaria'];
 
         this.onselectionchange = new Event('selectionchange');
 
@@ -60,12 +60,24 @@ class DropBoxController {
             let file = JSON.parse(li.dataset.file)
             let key = li.dataset.key;
 
-            let formData = new FormData();
+            promises.push(new Promise((resolve, reject) => {
 
-            formData.append('path', file.path);
-            formData.append('key', file.key);
+                let fileRef = firebase.storage().ref(this.currentFolder.join('/')).child(file.name);
 
-            promises.push(this.ajax('/file', 'DELETE', formData))
+                fileRef.delete().then(()=>{
+
+                    resolve({
+                        field:{
+                            key
+                        }
+                    })
+                }).catch(err => {
+
+                    reject(err)
+
+                })
+
+            }))
 
         })
 
